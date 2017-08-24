@@ -86,14 +86,14 @@
 
 void DeactivatePowerLineRelais()
 {
-  digitalWrite(RELAIS1, HIGH);
-  digitalWrite(RELAIS2, HIGH);
+  digitalWrite(RELAIS1, LOW);
+  digitalWrite(RELAIS2, LOW);
 }
 
 void ActivatePowerLineRelais()
 {
-  digitalWrite(RELAIS1, LOW);
-  digitalWrite(RELAIS2, LOW);
+  digitalWrite(RELAIS1, HIGH);
+  digitalWrite(RELAIS2, HIGH);
 }
 
 void InitRelais()
@@ -121,7 +121,7 @@ void initdisplay()
   void setup()
   {  
     InitRelais();
-    DeactivatePowerLineRelais();
+    ActivatePowerLineRelais();
     // serial init; only be needed if serial control is used 
     while(!Serial);                    // wait until serial ready
     Serial.begin(9600);                // start serial    
