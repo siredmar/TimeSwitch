@@ -90,6 +90,12 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
     Timeout_s = 60 * ThresholdTime;
     g_func_timer_info = Timeout_s;
   }
+  else if(ThresholdWatts == 0 || ThresholdTime == 0)
+  {
+    lcd.setCursor(0, 3);
+    lcd.print(F("Timeout disabled    "));
+    goto exit;;
+  }
 
   if(LCDML_BUTTON_checkEnter())
   {
@@ -130,7 +136,7 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
       }
     }
   }
-
+exit:
   if (LCDML_BUTTON_checkLeft())
   {
     LCDML_DISP_funcend();
@@ -139,6 +145,7 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
 
 void LCDML_DISP_loop_end(LCDML_FUNC_mainView)
 {
+  ActivatePowerLineRelais();
   LCDML_DISP_resetIsTimer();
 }
 
