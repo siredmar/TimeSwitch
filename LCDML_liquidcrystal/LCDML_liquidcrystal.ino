@@ -83,7 +83,25 @@
   LCDML_BACK_new_timebased_dynamic (0  , ( 20UL )         , _LCDML_start  , LCDML_BACKEND_control);
   LCDML_BACK_new_timebased_dynamic (1  , ( 1000UL )       , _LCDML_stop   , LCDML_BACKEND_menu);
   LCDML_BACK_create();
-  
+
+void DeactivatePowerLineRelais()
+{
+  digitalWrite(RELAIS1, HIGH);
+  digitalWrite(RELAIS2, HIGH);
+}
+
+void ActivatePowerLineRelais()
+{
+  digitalWrite(RELAIS1, LOW);
+  digitalWrite(RELAIS2, LOW);
+}
+
+void InitRelais()
+{
+  pinMode(RELAIS1, OUTPUT);
+  pinMode(RELAIS2, OUTPUT);
+}
+
 void initdisplay()
 {
     // LCD Begin
@@ -102,10 +120,8 @@ void initdisplay()
 // *********************************************************************
   void setup()
   {  
-    pinMode(RELAIS1, OUTPUT);
-    pinMode(RELAIS2, OUTPUT);
-    digitalWrite(RELAIS1, HIGH);
-    digitalWrite(RELAIS2, HIGH);
+    InitRelais();
+    DeactivatePowerLineRelais();
     // serial init; only be needed if serial control is used 
     while(!Serial);                    // wait until serial ready
     Serial.begin(9600);                // start serial    

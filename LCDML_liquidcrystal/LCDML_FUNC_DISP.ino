@@ -43,6 +43,13 @@ void readEeprom()
   ThresholdTime = EEPROMReadInt(EEPROM_ADDRESS_THRESHOLD_T);
   AdcCalib = EEPROMReadInt(EEPROM_ADDRESS_CALIB);
 }
+
+extern void ActivatePowerLineRelais();
+extern void DeactivatePowerLineRelais();
+extern void InitRelais();
+
+int g_func_timer_info = 0;  // time counter (global variable)
+unsigned long g_timer_1 = 0;    // timer variable (globale variable)
 // *********************************************************************
 void LCDML_DISP_setup(LCDML_FUNC_mainView)
 // *********************************************************************
@@ -52,6 +59,7 @@ void LCDML_DISP_setup(LCDML_FUNC_mainView)
 
 void LCDML_DISP_loop(LCDML_FUNC_mainView)
 {
+  static int timeoutStarted = 0;
   static int Timeout_s = 0;
   double Irms = emon1.calcIrms(1480) / 4;  // Calculate Irms only
   double Watts = Irms*230.0;
@@ -67,6 +75,29 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
   lcd.print("Treshold [min]: ");
   lcd.setCursor(16, 2);
   lcd.print(ThresholdTime);
+
+  if(LCDML_BUTTON_checkEnter()  /* || watts < thresh */)
+  {
+    ActivatePowerLineRelais();
+    timeoutStarted = 1;
+    Timeout_s = 60 * ThresholdTime;
+  }
+
+  if(timeoutStarted == 1)
+  {
+    if((millis() - g_timer_1) >= 500) 
+    {
+      g_timer_1 = millis();   
+      g_func_timer_info--;                // increment the value every secound
+      lcd.setCursor(0, 3);                // set cursor pos
+      lcd.print(g_func_timer_info);       // print the time counter value
+      if(g_func_timer_info < 0)
+      {
+        g_func_timer_info = 0;
+        DeactivatePowerLineRelais();
+      }
+    }
+  }
   
   if(LCDML_BUTTON_checkLeft())
   {
@@ -76,7 +107,7 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
 
 void LCDML_DISP_loop_end(LCDML_FUNC_mainView)
 {
-
+  LCDML_DISP_resetIsTimer();
 }  
 
 void LCDML_DISP_setup(LCDML_FUNC_threshold_w) 
@@ -194,8 +225,7 @@ void LCDML_DISP_loop_end(LCDML_FUNC_calibration)
 
 void LCDML_DISP_setup(LCDML_FUNC_test)   
 {
-  pinMode(RELAIS1, OUTPUT);
-  pinMode(RELAIS2, OUTPUT);
+  InitRelais();
 } 
   
 void LCDML_DISP_loop(LCDML_FUNC_test)
@@ -213,8 +243,7 @@ void LCDML_DISP_loop(LCDML_FUNC_test)
     LCDML_BUTTON_resetAll();
     if(RelaisSwitch == 0)
     {
-      digitalWrite(RELAIS1, LOW);
-      digitalWrite(RELAIS2, LOW);
+      DeactivatePowerLineRelais();
       RelaisSwitch = 1;
       initdisplay();
       lcd.setCursor(0, 0);
@@ -222,8 +251,7 @@ void LCDML_DISP_loop(LCDML_FUNC_test)
     }
     else
     {
-      digitalWrite(RELAIS1, HIGH);
-      digitalWrite(RELAIS2, HIGH);
+      ActivatePowerLineRelais();
       RelaisSwitch = 0;
       initdisplay();
       lcd.setCursor(0, 0);
@@ -235,7 +263,6 @@ void LCDML_DISP_loop(LCDML_FUNC_test)
 }
 void LCDML_DISP_loop_end(LCDML_FUNC_test) 
 {
-  digitalWrite(RELAIS1, HIGH);
-  digitalWrite(RELAIS2, HIGH);
+  DeactivatePowerLineRelais();
   initdisplay();
 }
