@@ -13,6 +13,31 @@ extern EnergyMonitor emon1;
 #define EEPROM_ADDRESS_THRESHOLD_T 10
 #define EEPROM_ADDRESS_CALIB       20
 
+class MinSecClass
+{
+  public:
+    CalcMinSec(int seconds)
+    {
+      Min = seconds / 60;
+      Sec = (seconds - (Min * 60));
+    }
+    GetMin() {
+      return Min;
+    }
+    GetSec() {
+      return Sec;
+    }
+    Reset()
+    {
+      Min = 0;
+      Sec = 0;
+    }
+    
+  private:
+    int Min;
+    int Sec;
+};
+
 void EEPROMWriteInt(int p_address, int p_value)
 {
   byte lowByte = ((p_value >> 0) & 0xFF);
@@ -50,11 +75,17 @@ extern void InitRelais();
 
 int g_func_timer_info = 0;  // time counter (global variable)
 unsigned long g_timer_1 = 0;    // timer variable (globale variable)
+MinSecClass *minsec;
+
 // *********************************************************************
 void LCDML_DISP_setup(LCDML_FUNC_mainView)
 // *********************************************************************
 {
+  minsec = new MinSecClass();
   readEeprom();
+  minsec->Reset();
+  minsec->CalcMinSec(ThresholdTime * 60);
+  g_func_timer_info = 60 * ThresholdTime;
 }
 
 void LCDML_DISP_loop(LCDML_FUNC_mainView)
@@ -64,7 +95,14 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
   static int Timeout_s = 0;
   double Irms  = 0;
   double Watts = 0;
-  if(poweredOff == 0)
+  int firstRun = 1;
+  if(firstRun == 1)
+  {
+    firstRun = 0;
+    minsec->CalcMinSec(60 * ThresholdTime);
+  }
+  
+  if (poweredOff == 0)
   {
     Irms = emon1.calcIrms(1480) / 4;  // Calculate Irms only
     Watts = Irms * 230.0;
@@ -90,14 +128,14 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
     Timeout_s = 60 * ThresholdTime;
     g_func_timer_info = Timeout_s;
   }
-  else if(ThresholdWatts == 0 || ThresholdTime == 0)
+  else if (ThresholdWatts == 0 || ThresholdTime == 0)
   {
     lcd.setCursor(0, 3);
     lcd.print(F("Timeout disabled    "));
     goto exit;;
   }
 
-  if(LCDML_BUTTON_checkEnter())
+  if (LCDML_BUTTON_checkEnter())
   {
     lcd.clear();
     LCDML_BUTTON_resetAll();
@@ -106,15 +144,9 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
     ActivatePowerLineRelais();
     Timeout_s = 60 * ThresholdTime;
     g_func_timer_info = Timeout_s;
+    minsec->CalcMinSec(g_func_timer_info);
     timeoutStarted = 1;
   }
-  //  else if(Watts >= ThresholdWatts)
-  //  {
-  //    timeoutStarted = 0;
-  //    ActivatePowerLineRelais();
-  //    Timeout_s = 60 * ThresholdTime;
-  //    g_func_timer_info = Timeout_s;
-  //  }
 
   if (timeoutStarted == 1)
   {
@@ -122,9 +154,17 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
     {
       g_timer_1 = millis();
       g_func_timer_info--;                // increment the value every secound
+      minsec->CalcMinSec(g_func_timer_info);
       lcd.setCursor(0, 3);                // set cursor pos
-      lcd.print(g_func_timer_info);       // print the time counter value
-      lcd.print("       ");       
+      lcd.print("Remaining: ");
+      lcd.print(minsec->GetMin());       // print the time counter value
+      lcd.print(":");
+      if(minsec->GetSec() < 10)
+      {
+        lcd.print("0");
+      }
+      lcd.print(minsec->GetSec());
+      lcd.print("    ");
       if (g_func_timer_info <= 0)
       {
         g_func_timer_info = 0;
@@ -139,7 +179,8 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
 exit:
   if (LCDML_BUTTON_checkLeft())
   {
-    LCDML_DISP_funcend();
+     poweredOff = 0;
+     LCDML_DISP_funcend();
   }
 }
 
@@ -147,6 +188,8 @@ void LCDML_DISP_loop_end(LCDML_FUNC_mainView)
 {
   ActivatePowerLineRelais();
   LCDML_DISP_resetIsTimer();
+  minsec->Reset();
+  free(minsec);
 }
 
 void LCDML_DISP_setup(LCDML_FUNC_threshold_w)
