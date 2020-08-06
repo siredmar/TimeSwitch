@@ -104,8 +104,9 @@ void LCDML_DISP_loop(LCDML_FUNC_mainView)
   
   if (poweredOff == 0)
   {
-    Irms = emon1.calcIrms(1480) / 4;  // Calculate Irms only
-    Watts = Irms * 230.0;
+    double r = emon1.calcIrms(1480);
+    Watts = map(r, 2.73, 12.3, 3.2, 162.6);
+    
     lcd.setCursor(0, 0);
     lcd.print("Watts: ");
     lcd.setCursor(10, 0);
